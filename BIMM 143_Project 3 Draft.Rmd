@@ -1,0 +1,383 @@
+---
+title: "BIMM 143_Project 3C Draft"
+author: "Christina P"
+date: "3/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Introduction
+
+#Scientific Question: 
+Are the enzymes responsible for producing 2-methyl-butanal highly conserved across truffle species?
+
+2-methyl-butanal is one of the important volatiles produced by truffles, and has been identified as the principal component of its odor in species such as Tuber melanosporum, T. aestivum, T. indicum, T. rufum, T. brumale, and T. magnatum (Mustafa et al. 2020). It is also known that truffle from different species and regions have differing compositions of volatiles (Diaz et al. 2003, March et al. 2006). For instance, T. melanosporum has higher ester and benzene derivative content than T. aestivum (Diaz et al. 2003). For truffle species that are identified as producing 2-methyl-butanal in Mustafa et al. (2020), the percent content also varies. T. melanosporum is reported to have levels between 8.4-19.13%, T. indicum with 2.0%, and all the other species are reported to have less than 1% of 2-methyl-butanal in their volatile composition. 
+
+In annotating the black truffle (T. melanosporum) genome, Islam et al. (2013) identified three enzymes that may be responsible for the production of 2-methyl-butanal. While 2-methyl-butanal has been found as a truffle volatile in multiple studies, the genomes of many truffle species remain largely unexplored and many gene/protein entries remain unannotated. The three genes identified in Islam et al. (2013) can be used as a query to find homologous genes in other Tuber species, and their similarity can be assessed.
+
+#Scientific Hypothesis:
+Since there are differences in the production of 2-methyl-butanal in different truffle specimen, the sequences would have considerable variety. T. melanosporum has been shown to produce much higher levels of 2-methyl-butanal, so it is expected that its enzyme sequences would be the most divergent from the others.
+
+Here we use a BLAST search with the three enzymes from Islam et al. (2013) as the query sequences to identify possible homologous sequences from various Tuber species. The BLAST results were downloaded as a FASTA file to use for analysis. For each set of results, a Multiple Sequence Alignment was done to print out the alignment, and the results are directly visualized using the ggmsa() function, which colors alignments by amino acid functionality. 
+
+--------------------------------------------------------------------------
+
+##Loading in Packages
+
+Before loading the packages, installation is required:
+1. Bioconductor -- Provides tools and packages for analysis of bioinformatics data in R.
+https://www.bioconductor.org/install/
+
+2. Rentrez -- This package is the Bioconductor interface to obtain sequences from various databases in R. https://cran.r-project.org/web/packages/rentrez/vignettes/rentrez_tutorial.html
+
+3. msa -- This package allows users to run Multiple Sequence Alignments from the FASTA format.
+https://bioconductor.org/packages/release/bioc/html/msa.html
+
+4. Biostrings -- BioConductor package that allows R users to manipulate and analyze DNA, RNA, Amino Acid sequences.
+https://bioconductor.org/packages/release/bioc/html/Biostrings.html
+
+5. ggpubr -- Package that allows formatting of ggplots that are publication-ready.
+https://rpkgs.datanovia.com/ggpubr/
+
+6. ggmsa -- Package to easily visualize Multiple Sequence Alignments
+https://cran.r-project.org/web/packages/ggmsa/vignettes/ggmsa.html
+
+
+```{r}
+#Install BioConductor in R
+if(!requireNamespace("BiocManager",quietly=TRUE))
+    install.packages("BiocManager")
+#Load BioConductor into the workspace
+library(BiocManager)
+
+#Install rentrez, msa, Biostrings using BioConductor
+BiocManager::install("rentrez")
+BiocManager::install("msa")
+BiocManager::install("Biostrings")
+
+#Install the ggpubr, ggmsa package using CRAN installer
+install.packages("ggpubr")
+install.packages("ggmsa")
+
+#Load the downloaded libraries in the workspace
+library(rentrez)
+library(msa)
+library(Biostrings)
+library(ggpubr)
+library(ggmsa)
+```
+
+--------------------------------------------------------------------------
+
+##Performing Bioinformatics Analysis
+
+The following chunk of code is to use the ID numbers of the T. melanosporum protein sequences from Islam et al. (2013) to obtain the amino acid sequence from NCBI and to export it to a FASTA format.
+
+```{r}
+#Enzymes in Tuber melanosporum that produce DMS
+#XP_002835823.1, XP_002835492.1, XP_002836942.1 (protein sequences)
+
+#Create a string of the protein sequence ID numbers.
+TMEnzymeCode=c("XP_002835823","XP_002835492","XP_002836942")
+
+#Use rentrez to fetch the protein sequences from the database
+TMEnzymeSeq=entrez_fetch(db="protein",id=TMEnzymeCode,rettype="fasta")
+
+#View the sequences
+TMEnzymeSeq
+
+#Output the sequences to a FASTA file
+write(TMEnzymeSeq,file="Protein FASTA.txt")
+
+
+```
+
+After using the above outputted FASTA file, the sequences are used in NCBI's pblast (protein BLAST) application online against available data from the Tuber genus to identify possible homologous proteins. BLAST itself works by splitting the query sequence into smaller words of length k called seeds. Neighbor words, which are k-length words that are considered similar enough to the seed as judged by a scoring matrix, are added to the set of seeds. These words are then searched against the database, and when there is a match, alignment extends in both direction. Alignment score is calculated with a scoring matrix, typically BLOSUM62, and if the alignment score drops below a certain threshold, the sequences are deemed too dissimilar. The alignment stops and it moves on to the next seed to search against the database until matches are found. 
+
+Homologous sequences that have >70% query coverage and >50% homology were obtained and saved to "BLAST_Results Compiled.txt" in FASTA format, which is opened in the following code.
+
+```{r}
+#Load the query sequences
+TMEnzymeSeq=readAAStringSet("Protein FASTA.txt")
+
+#Load the homologous sequences
+HomologSeq=readAAStringSet("BLAST_Results Compiled.txt")
+```
+
+Additionally, tabulated data describing the BLAST results are also available and loaded below
+```{r}
+#Load the csv files containing the BLAST description table for the selected results and save them to respective variables.
+TMEnzyme1BLASTResultsDesc=read.csv("BLAST_XP_002835823 vs Tuber Desc Table.csv")
+
+#View the results for the 1st enzyme
+TMEnzyme1BLASTResultsDesc
+```
+
+```{r}
+TMEnzyme2BLASTResultsDesc=read.csv("BLAST_XP_002835492 vs Tuber Desc Table.csv")
+
+#View the results for the 2nd enzyme
+TMEnzyme2BLASTResultsDesc
+```
+
+```{r}
+TMEnzyme3BLASTResultsDesc=read.csv("BLAST_XP_002836492 vs Tuber Desc Table.csv")
+
+#View the results for the 3rd enzyme
+TMEnzyme3BLASTResultsDesc
+```
+
+HomologSeq contains 15 sequences, sequences 1-5 are results from the 1st query, 6-10 from the 2nd query, and 11-15 from the 3rd. Therefore we want to group the AAStringSet objects according to their query sequences.
+
+```{r}
+#Group AAStringSets by its BLAST query
+TMEnzyme1=append(TMEnzymeSeq[1],HomologSeq[1:5])
+TMEnzyme2=append(TMEnzymeSeq[2],HomologSeq[6:10])
+TMEnzyme3=append(TMEnzymeSeq[3],HomologSeq[11:15])
+```
+
+For each AAStringSet grouping made above, Multiple Sequence Analysis (MSA) was run with the function msa(). MSA is the alignment of multiple (3 or more) DNA/RNA/protein of similar sizes. The output can be used to form phylogenetic trees and infer homology. The default method for msa() is ClustalW, an algorithm that works in three distinct steps.
+
+1. It first does pairwise sequence alignment by the k-tuple method. What this means is that the sequences being aligned are broken up into smaller words of a certain length (seeds), and these seeds are searched against the other sequence. If an initial match is found, the search extends in both directions and stops when the match score drops below a certain threshold. The search using that particular seed word is then abandoned, and another one is used until a best-matching alignment is generated.  
+
+2. Out of all the pairwise alignments, a guide tree is constructed using Neighbour-Joining method, where the sequences that pair the best are joined into a singular node first. The process continues until there is only one node left with two branches.The distance between branches correlate with the divergence of the branches, and this is used to calculate the weight of each sequence.
+
+3. Progressive alignment is done, with series of pairwise alignments done in the order of the tree generated in step 2. In each step, a weight matrix is used to introduce penalties for mismatches and gaps and to calculate conservation scores.
+
+```{r}
+#Run multiple sequence alignments on each query group and display the results
+MSAAlign1=msa(TMEnzyme1)
+MSAAlign1
+```
+```{r}
+MSAAlign2=msa(TMEnzyme2)
+MSAAlign2
+```
+```{r}
+MSAAlign3=msa(TMEnzyme3)
+MSAAlign3
+```
+
+The output of msa() is a MsaAAMultipleAlignment object, which is not compatible with ggmsa() for visualization. The outputs need to be converted to an AAStringSet.
+
+```{r}
+#Check the type of MSAAlign variables
+str(MSAAlign1)
+str(MSAAlign2)
+str(MSAAlign3)
+
+```
+
+```{r}
+#Convert the alignments to AAStringSet objects
+MSAAlign1_unmask=unmasked(MSAAlign1)
+MSAAlign2_unmask=unmasked(MSAAlign2)
+MSAAlign3_unmask=unmasked(MSAAlign3)
+
+#Check the type of output objects after conversion
+str(MSAAlign1_unmask)
+str(MSAAlign2_unmask)
+str(MSAAlign3_unmask)
+```
+
+------------------------------------------------------------------------
+
+##Plotting The Results
+
+The data here will be visualized using ggmsa(), a function which visualizes MSAs using ggplot functionality. Each amino acid in the aligned sequences will be assigned a color, which corresponds to the chemical functional group the amino acid belongs to. This allows for quick visualization of where protein sequence really diverged. Amino acids with similar chemical properties are expected to behave similarly, and alterations in chemical properties may be telling of changed functionality. 
+
+Since the MSA is done through the entire length of the proteins, and ggmsa() can only plot in one straight line, which makes viewing impractical if the alignments are ~500 amino acids long, the plotting is done in ~30 amino acid chunks, and a final plot is compiled with ggarrange, where each MSA segment is shown in a single page arranged vertically.
+
+#Plotting the Multiple Sequence Alignment of the First T. melanosporum 2-methyl-butanal Enzyme
+```{r}
+#Obtain the width of sequences in MSAAlign1_unmask
+width(MSAAlign1_unmask)
+```
+```{r}
+#Create a vector of indices for when ggmsa() should start the plot. Each segment should contain ~30 amino acids
+StartPoint=seq(1,480,30)
+StartPoint
+
+```
+
+```{r}
+#Generate a vector of the same length as StartPoint that marks the indices of when ggmsa() should stop plotting in a given segment.
+#We want the first ggmsa() plot to include amino acids 1 through 30, the second one to include amino acids 31 through 60, etc. So the values in EndPoint[i] should correspond to the values in StartPoint[i+1]-29
+EndPoint=StartPoint-1+30
+EndPoint
+```
+
+```{r}
+#Initiate a list where plot objects are going to be stored
+Plot1List = list()
+
+#Create for loop that goes through each paired value of StartPoint and EndPoint
+for(i in 1:length(StartPoint)){
+  #use ggmsa() to make a MSA plot starting and ending at the paired values indicated by StartPoint and EndPoint
+  p=ggmsa(MSAAlign1_unmask,start=StartPoint[i],end=EndPoint[i],seq_name = TRUE)
+  #Add the plot object to the List
+  Plot1List[[i]]=p
+}
+
+#Create a pdf to write the plot to, and set plot width to 17" and height to 30"
+pdf(file="Tuber melanosporum 2-methyl butanal enzyme 1 MSA Alignment.pdf",width=17,height=30)
+
+#Arrange all plot objects in Plot1List vertically in the pdf file
+ggarrange(plotlist=Plot1List,ncol=1)
+
+#Close the pdf file
+dev.off()
+
+#WARNING -- THIS PLOT IS LARGE, SO IT MAY NOT PROPERLY DISPLAY IN THE R MARKDOWN WINDOW. PLEASE SEE THE OUTPUT PDF
+#Output to the mini console
+ggarrange(plotlist=Plot1List,ncol=1)
+```
+
+#Plotting the Multiple Sequence Alignment of the Second T. melanosporum 2-methyl-butanal Enzyme
+```{r}
+#Obtain the width of sequences in MSAAlign2_unmask
+width(MSAAlign2_unmask)
+```
+```{r}
+#Create a vector of indices for when ggmsa() should start the plot. Each segment should contain ~30 amino acids
+StartPoint=seq(1,573,30)
+StartPoint
+
+```
+
+```{r}
+#Since the width of MSAAlign2_unmask is 573 having a segment of ggmsa() containing just 3 amino acids (indices 571-573) is excessive, and the last 3 amino acids should just be included in the previous segment (indices 541-573)
+StartPoint=StartPoint[1:19]
+StartPoint
+```
+
+```{r}
+#Generate a vector of the same length as StartPoint that marks the indices of when ggmsa() should stop plotting in a given segment.
+#We want the first ggmsa() plot to include amino acids 1 through 30, the second one to include amino acids 31 through 60, etc. So the values in EndPoint[i] should correspond to the values in StartPoint[i+1]-29
+EndPoint=StartPoint-1+30
+
+#The last segment should go to 573 instead of just 571, so it is redefined
+EndPoint[19]=573
+EndPoint
+```
+
+```{r}
+#Initiate a list where plot objects are going to be stored
+Plot2List = list()
+
+#Create for loop that goes through each paired value of StartPoint and EndPoint
+for(i in 1:length(StartPoint)){
+  #use ggmsa() to make a MSA plot starting and ending at the paired values indicated by StartPoint and EndPoint
+  p=ggmsa(MSAAlign2_unmask,start=StartPoint[i],end=EndPoint[i],seq_name = TRUE)
+  #Add the plot object to the List
+  Plot2List[[i]]=p
+}
+
+#Create a pdf to write the plot to, and set plot width to 17" and height to 35"
+pdf(file="Tuber melanosporum 2-methyl butanal enzyme 2 MSA Alignment.pdf",width=17,height=35)
+
+#Arrange all plot objects in Plot1List vertically in the pdf file
+ggarrange(plotlist=Plot2List,ncol=1)
+
+#Close the pdf file
+dev.off()
+
+#WARNING -- THIS PLOT IS LARGE, SO IT MAY NOT PROPERLY DISPLAY IN THE R MARKDOWN WINDOW. PLEASE SEE THE OUTPUT PDF
+#Output to the mini console
+ggarrange(plotlist=Plot2List,ncol=1)
+```
+
+#Plotting the Multiple Sequence Alignment of the Third T. melanosporum 2-methyl-butanal Enzyme
+```{r}
+
+#Obtain the width of sequences in MSAAlign2_unmask
+width(MSAAlign3_unmask)
+```
+```{r}
+#Create a vector of indices for when ggmsa() should start the plot. Each segment should contain ~30 amino acids
+StartPoint=seq(1,524,30)
+StartPoint
+
+```
+
+```{r}
+#Generate a vector of the same length as StartPoint that marks the indices of when ggmsa() should stop plotting in a given segment.
+#We want the first ggmsa() plot to include amino acids 1 through 30, the second one to include amino acids 31 through 60, etc. So the values in EndPoint[i] should correspond to the values in StartPoint[i+1]-29
+EndPoint=StartPoint-1+30
+
+#The last segment would go to 541 with the above calculation, which is out of range, so the last member of EndPoint is redefined to 524, which is the end of the MSA.
+EndPoint[18]=524
+EndPoint
+```
+
+```{r}
+#Initiate a list where plot objects are going to be stored
+Plot3List = list()
+
+#Create for loop that goes through each paired value of StartPoint and EndPoint
+for(i in 1:length(StartPoint)){
+  #use ggmsa() to make a MSA plot starting and ending at the paired values indicated by StartPoint and EndPoint
+  p=ggmsa(MSAAlign3_unmask,start=StartPoint[i],end=EndPoint[i],seq_name = TRUE)
+  #Add the plot object to the List
+  Plot3List[[i]]=p
+}
+
+#Create a pdf to write the plot to, and set plot width to 17" and height to 34"
+pdf(file="Tuber melanosporum 2-methyl butanal enzyme 3 MSA Alignment.pdf",width=17,height=34)
+
+#Arrange all plot objects in Plot1List vertically in the pdf file
+ggarrange(plotlist=Plot3List,ncol=1)
+
+#Close the pdf file
+dev.off()
+
+#WARNING -- THIS PLOT IS LARGE, SO IT MAY NOT PROPERLY DISPLAY IN THE R MARKDOWN WINDOW. PLEASE SEE THE OUTPUT PDF
+#Output to the mini console
+ggarrange(plotlist=Plot3List,ncol=1)
+```
+--------------------------------------------------------------------------------
+
+##Analyzing the Results
+
+#T. Melanosporum 2-methyl-butanal Enzyme 1 (XP_002835823.1) Alignment
+Looking at the plot for the 1st 2-methyl-butanal enzyme (XP_002835823.1), it can be easily seen that T. aestivum has an insertion that is 59 amino acids long in the beginning of the sequence and that T. magnatum has an insertion in location 161-177 that other truffles do not have. Otherwise, sequences have reasonably great homology. This is confirmed by the BLAST results, which has the T. magnatum and T. aestivum as the sequences with lowest identity with T. melanosporum in this query.
+
+#T. Melanosporum 2-methyl-butanal Enzyme 2 (XP_002835492.1) Alignment
+Looking at the plot for the 2nd 2-methyl-butanal enzyme (XP_002835492.1), various truffle species have deletions and insertions in amino acid residues 1-205, after which the protein BLAST results seem to be in good alignment as far as chemical functional groups go. However, the T. melanosporum query sequence does not align as well with the others, with colors on the plot that mismatch with the other sequences. T. melanosporum produces much higher levels of 2-methyl-butanal (range of 8.4-19.13%) than other truffle species (less than 2.0%) (Mustafa et al. 2020). Perhaps this enzyme can account for the differences in the production levels. Compared to the first enzyme, the BLAST results for this protein have lower % identity values, which is consistent with the MSA results.
+
+#T. Melanosporum 2-methyl-butanal Enzyme 3 (XP_002836942.1) Alignment
+Compared to the BLAST result sequences, the T. melanosporum query sequence seems to have more insertions that are not observed in the other species, and looking at the colors on the plot, the T. melanosporum enzyme appears to be mismatching the other sequences, and this is another enzyme that might explain why T. melanosporum produces much higher 2-methyl-butanal.
+
+
+#Overall Results
+Almost all the truffle species identified as producing 2-methyl-butanal in Mustafa et al. (2020): T. aestivum, T. indicum, T. rufum, T. brumale, and T. magnatum indeed have homologous 2-methyl-butanal generating enzymes. T. rufum is not included in the results of this project, but genomic data on T. rufum is also lacking. Other species covered in Mustafa et al. (2020) that are not listed as producing 2-methyl-butanal include T. macrosporum, T. mesentericum, T. excavatum, and T. borchii. Interestingly, there exists a T. borchii homolog for all three T. melanosporum enzymes queried. May be due to method limitations of previous studies or maybe it produces the volatile in such a small amount that it's difficult to detect trhu GC-MS. The lack of data available for the other species is likely the reason why no hits were found. The following data frame summarizes some of the sequence data that is available on NCBI.
+
+```{r}
+#Create vector for truffle species names
+Species=c("T. macrosporum","T. mesentericum","T. excavatum","T. borchii","T. aestivum","T. indicum","T. rufum","T. brumale","T. magnatum")
+
+#Create vector for the number of protein sequences available per species
+NumberOfProteinSeqsAvailable=c(1,50,5,12581,9410,24494,23,24277,9585)
+
+#Create vector for the number of nucleotide sequences available per species
+NumberOfNucleotideSeqsAvailable=c(143,344,129,4575,4159,2739,232,1519,1201)
+
+#Create vector to indicate the availability of genome assemblies per species. 
+#Y denotes Yes for available, N denotes No for Not Available
+GenomeAssemblyAvailable=c("N","N","N","Y","N","Y","N","Y","Y")
+
+#Combine the above vectors as columns of a data frame
+TuberDataAvailability=as.data.frame(cbind(Species,NumberOfProteinSeqsAvailable,NumberOfNucleotideSeqsAvailable,GenomeAssemblyAvailable))
+
+#Display the data
+TuberDataAvailability
+
+```
+The limitations of this project is that neither BLAST nor MSAs are complete alignments. Instead, they are run by algorithms that are designed to increase computation speed at the expense of some accuracy. The MSA plot may seem convincing in that the 2nd and 3rd T. melanosporum enzymes look visually divergent from the identified homologous sequences, but this could simply be from poor MSA accuracy. 
+
+
+#Conclusion
+While the homologous proteins had great conservation, T. melanosporum enzymes, particularly the one encoded XP_002835492.1 and XP_002836942.1 have regions that vary greatly compared to other truffle species, which may be a genetic determinant to the differing 2-methyl-butanal production. However, it may also appear to be different due to inaccuracies in the MSA.
