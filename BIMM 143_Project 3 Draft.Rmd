@@ -379,5 +379,17 @@ TuberDataAvailability
 The limitations of this project is that neither BLAST nor MSAs are complete alignments. Instead, they are run by algorithms that are designed to increase computation speed at the expense of some accuracy. The MSA plot may seem convincing in that the 2nd and 3rd T. melanosporum enzymes look visually divergent from the identified homologous sequences, but this could simply be from poor MSA accuracy. 
 
 
-#Conclusion
+##Conclusion
 While the homologous proteins had great conservation, T. melanosporum enzymes, particularly the one encoded XP_002835492.1 and XP_002836942.1 have regions that vary greatly compared to other truffle species, which may be a genetic determinant to the differing 2-methyl-butanal production. However, it may also appear to be different due to inaccuracies in the MSA.
+
+##References
+Daugelaite, Jurate, Aisling O'Driscoll, and Roy D. Sleator. "An overview of multiple sequence alignments and cloud computing in bioinformatics." International Scholarly Research Notices 2013 (2013).
+
+Dıaz, P., et al. "Truffle aroma characterization by headspace solid-phase microextraction." Journal of Chromatography A 1017.1-2 (2003): 207-214.
+
+Islam, Mohammad Tawhidul, et al. "Unlocking the puzzling biology of the black Périgord truffle Tuber melanosporum." Journal of proteome research 12.12 (2013): 5349-5356.
+
+March, Raymond E., Don S. Richards, and Robert W. Ryan. "Volatile compounds from six species of truffle–head-space analysis and vapor analysis at high mass resolution." International Journal of Mass Spectrometry 249 (2006): 60-67.
+
+Mustafa, Ahmed M., et al. "An Overview on Truffle Aroma and Main Volatile Compounds." Molecules 25.24 (2020): 5948.
+
